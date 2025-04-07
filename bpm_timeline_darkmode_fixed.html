@@ -1,0 +1,114 @@
+
+<!DOCTYPE html>
+
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<title>BPM 타임라인 툴 (다크모드 전용)</title>
+<style>
+    :root {
+      --bg: #f9f9f9;
+      --fg: #000;
+      --field-bg: #fff;
+      --border: #ccc;
+    }
+    body.dark {
+      --bg: #1e1e1e;
+      --fg: #eaeaea;
+      --field-bg: #2d2d2d;
+      --border: #555;
+    }
+    body {
+      background: var(--bg);
+      color: var(--fg);
+      font-family: 'Pretendard', sans-serif;
+      padding: 2rem;
+      transition: all 0.3s ease;
+    }
+    label, textarea, input, button {
+      display: block;
+      width: 100%;
+      max-width: 600px;
+      margin-top: 1rem;
+      font-size: 1rem;
+    }
+    textarea, input, button, pre {
+      background: var(--field-bg);
+      color: var(--fg);
+      border: 1px solid var(--border);
+      padding: 0.5rem;
+    }
+    textarea { height: 200px; white-space: pre; font-family: monospace; }
+    pre { white-space: pre-wrap; word-break: break-word; margin-top: 1rem; }
+    strong { display: block; margin-top: 1rem; }
+    .toggle-btn {
+      margin-top: 2rem;
+      font-weight: bold;
+      cursor: pointer;
+      width: fit-content;
+      padding: 0.5rem 1rem;
+      background: var(--border);
+      border: none;
+    }
+  </style>
+</head>
+<body class="dark">
+<button class="toggle-btn" onclick="toggleDarkMode()">🌗 다크모드 전환</button>
+<h1>🎵 BPM 기반 타임라인 생성기</h1>
+<label for="bpm">1️⃣ BPM이 몇인가요?</label>
+<input id="bpm" placeholder="예: 110" type="number"/>
+<button onclick="calculateFPS()">2️⃣ FPS 계산 + 마디당 프레임 계산</button>
+<p id="fpsResult"></p>
+<label for="story">3️⃣ 스토리보드 라인이 있나요?</label>
+<textarea id="story" placeholder="예: 0. 인트로 (4마디): 동작 → 동작"></textarea>
+<button onclick="generateTimeline()">4️⃣ 타임라인 생성</button>
+<h3>5️⃣ 복사 가능한 출력</h3>
+<pre id="output"></pre>
+
+<script>
+    let framesPerBeat = 15;
+
+    function calculateFPS() {
+      const bpm = parseFloat(document.getElementById('bpm').value);
+      const fps = (bpm * framesPerBeat) / 60;
+      document.getElementById('fpsResult').innerText = `FPS: ${fps.toFixed(2)} / 1마디: ${(fps * 4).toFixed(2)}프레임`;
+    }
+
+    function generateTimeline() {
+      const lines = document.getElementById('story').value.trim().split('\n');
+      let totalFrame = 1;
+      let results = [];
+      const bpm = parseFloat(document.getElementById('bpm').value);
+      const framesPerBar = framesPerBeat * 4;
+
+      for (const lineRaw of lines) {
+        const line = lineRaw.replace(/^#+\s*/, '');
+        const match = line.match(/(\d+)\.\s*(.*?)\s*\((\d+)마디\)(?::\s*(.*))?/);
+        if (!match) continue;
+        const [_, index, title, barCountStr, actionsRaw] = match;
+        const barCount = parseInt(barCountStr);
+        const actions = actionsRaw ? actionsRaw.split('→').map(s => s.trim()) : [];
+
+        const start = totalFrame;
+        const end = totalFrame + framesPerBar * barCount - 1;
+        results.push(`<strong>${index}. ${title} (${barCount}마디) [${start}-${end}프레임]</strong>`);
+
+        for (let i = 0; i < barCount; i++) {
+          const bStart = totalFrame + i * framesPerBar;
+          const bEnd = bStart + framesPerBar - 1;
+          const action = actions[i] ? `: ${actions[i]}` : '';
+          results.push(`- ${i + 1}마디 [${bStart}-${bEnd}프레임]${action}`);
+        }
+        results.push('');
+        totalFrame = end + 1;
+      }
+
+      document.getElementById('output').innerHTML = results.join('\n');
+    }
+
+    function toggleDarkMode() {
+      document.body.classList.toggle('dark');
+    }
+  </script>
+</body>
+</html>
